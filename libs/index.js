@@ -20,7 +20,7 @@ class LocalStorageCache {
     this.strategy = strategy || 'LRU';
 
     if (size > 3 * 1024) {
-      throw new Error('超过最大空间（3MB）限制！')
+      throw new Error('3MB is the upper limit of size')
     }
 
     this.size = (size || 2 * 1024) * 1024;
@@ -64,7 +64,7 @@ class LocalStorageCache {
   _overflow(key, value, expire) {
     const newItemSize = sizeof({[key]: value});
     if (newItemSize >= this.size) {
-      throw new Error('单次缓存的数据大于缓存整体空间大小！');
+      throw new Error(`the size of ${key} is bigger than cache\'s`);
     }
 
     const itemMark = this._getMarks(key);
@@ -82,7 +82,7 @@ class LocalStorageCache {
     }
 
     const storageSize = sizeof(this.storage);
-    if (newItemSize + storageSize < this.size) { // 缓存空间足够
+    if (newItemSize + storageSize < this.size) { // size is enough
       this._setMarks(key, newItemMark);
       return;
     }
@@ -112,7 +112,7 @@ class LocalStorageCache {
       return undefined;
     }
 
-    if (itemMark[EXPIRE] && itemMark[EXPIRE] * 1000 + itemMark[CREATEAT] < new Date().getTime()) { // 已过期
+    if (itemMark[EXPIRE] && itemMark[EXPIRE] * 1000 + itemMark[CREATEAT] < new Date().getTime()) { // expired
       this._remove(key);
       return undefined;
     }
