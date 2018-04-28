@@ -29,8 +29,9 @@ const storageCache = new LocalStorageCache(2 * 1024, 'LRU'); //
  * @param {string/number} key
  * @param {any} value
  * @param {number} [expire]
+ * @param {string} [charset]
  */
-storageCache.setCache('name', 'lzwaiwai').setCache('age', 18);
+storageCache.setCache('name', 'lzwaiwai', 'utf8').setCache('age', 18);
 storageCache.setCache('work', 'IT', 24 * 60 * 60);
 
 /**

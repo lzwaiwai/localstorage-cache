@@ -1,26 +1,34 @@
-var sizeof = function(object) {
-    var objectList = [];
-    var stack = [object];
-    var bytes = 0;
-
-    while (stack.length) {
-        var value = stack.pop();
-
-        if(typeof value === 'boolean'){
-            bytes += 4;
-        }else if(typeof value === 'string'){
-            bytes += value.length * 2;
-        }else if(typeof value === 'number'){
-            bytes += 8;
-        }else if(typeof value === 'object' && objectList.indexOf( value ) === -1){
-            objectList.push(value);
-            // if the object is not an array, add the sizes of the keys
-            if (Object.prototype.toString.call(value) != '[object Array]'){
-                for(var key in value) bytes += 2 * key.length;
+// http://www.alloyteam.com/2013/12/js-calculate-the-number-of-bytes-occupied-by-a-string/
+var sizeof = function(obj, charset){
+    var str = JSON.stringify(obj);
+    var total = 0,
+        charCode,
+        i,
+        len;
+    charset = charset ? charset.toLowerCase() : '';
+    if(charset === 'utf-16' || charset === 'utf16'){
+        for(i = 0, len = str.length; i < len; i++){
+            charCode = str.charCodeAt(i);
+            if(charCode <= 0xffff){
+                total += 2;
+            }else{
+                total += 4;
             }
-            for(var key in value) stack.push(value[key]);
+        }
+    }else{
+        for(i = 0, len = str.length; i < len; i++){
+            charCode = str.charCodeAt(i);
+            if(charCode <= 0x007f) {
+                total += 1;
+            }else if(charCode <= 0x07ff){
+                total += 2;
+            }else if(charCode <= 0xffff){
+                total += 3;
+            }else{
+                total += 4;
+            }
         }
     }
-    return bytes;
+    return total;
 }
 export default sizeof;

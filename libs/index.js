@@ -8,7 +8,7 @@ const EXPIRE = 'e';
 const TIMES = 't';
 
 class LocalStorageCache {
-  constructor(size, strategy) {
+  constructor(size, strategy, charset) {
     const _storage = localStorage.getItem(CACHE) || '{}';
     const storage = JSON.parse(_storage);
 
@@ -18,6 +18,7 @@ class LocalStorageCache {
     this.storage = storage;
     this.marks = marks;
     this.strategy = strategy || 'LRU';
+    this.charset = charset;
 
     if (size > 3 * 1024) {
       throw new Error('3MB is the upper limit of size')
@@ -62,7 +63,7 @@ class LocalStorageCache {
   }
 
   _overflow(key, value, expire) {
-    const newItemSize = sizeof({[key]: value});
+    const newItemSize = sizeof({[key]: value}, this.charset);
     if (newItemSize >= this.size) {
       throw new Error(`the size of ${key} is bigger than cache\'s`);
     }
@@ -81,7 +82,7 @@ class LocalStorageCache {
       newItemMark[TIMES] = 0;
     }
 
-    const storageSize = sizeof(this.storage);
+    const storageSize = sizeof(this.storage, this.charset);
     if (newItemSize + storageSize < this.size) { // size is enough
       this._setMarks(key, newItemMark);
       return;
@@ -91,7 +92,7 @@ class LocalStorageCache {
     const v = this.strategy === 'LFU' ? TIMES : UPDATEAT;
     keys = keys.sort((a, b) => this.marks[a][v] < this.marks[b][v]);
 
-    while (newItemSize + sizeof(this.storage) >= this.size) {
+    while (newItemSize + sizeof(this.storage, this.charset) >= this.size) {
       const _key = keys.pop();
 
       delete this.storage[_key];

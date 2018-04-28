@@ -4,21 +4,39 @@
 	(global['localstorage-cache'] = factory());
 }(this, (function () { 'use strict';
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
-  return typeof obj;
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+// http://www.alloyteam.com/2013/12/js-calculate-the-number-of-bytes-occupied-by-a-string/
+var sizeof = function sizeof(obj, charset) {
+    var str = JSON.stringify(obj);
+    var total = 0,
+        charCode,
+        i,
+        len;
+    charset = charset ? charset.toLowerCase() : '';
+    if (charset === 'utf-16' || charset === 'utf16') {
+        for (i = 0, len = str.length; i < len; i++) {
+            charCode = str.charCodeAt(i);
+            if (charCode <= 0xffff) {
+                total += 2;
+            } else {
+                total += 4;
+            }
+        }
+    } else {
+        for (i = 0, len = str.length; i < len; i++) {
+            charCode = str.charCodeAt(i);
+            if (charCode <= 0x007f) {
+                total += 1;
+            } else if (charCode <= 0x07ff) {
+                total += 2;
+            } else if (charCode <= 0xffff) {
+                total += 3;
+            } else {
+                total += 4;
+            }
+        }
+    }
+    return total;
 };
-
-
-
-
-
-
-
-
-
-
 
 var classCallCheck = function (instance, Constructor) {
   if (!(instance instanceof Constructor)) {
@@ -63,36 +81,6 @@ var defineProperty = function (obj, key, value) {
   return obj;
 };
 
-var sizeof = function sizeof(object) {
-    var objectList = [];
-    var stack = [object];
-    var bytes = 0;
-
-    while (stack.length) {
-        var value = stack.pop();
-
-        if (typeof value === 'boolean') {
-            bytes += 4;
-        } else if (typeof value === 'string') {
-            bytes += value.length * 2;
-        } else if (typeof value === 'number') {
-            bytes += 8;
-        } else if ((typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object' && objectList.indexOf(value) === -1) {
-            objectList.push(value);
-            // if the object is not an array, add the sizes of the keys
-            if (Object.prototype.toString.call(value) != '[object Array]') {
-                for (var key in value) {
-                    bytes += 2 * key.length;
-                }
-            }
-            for (var key in value) {
-                stack.push(value[key]);
-            }
-        }
-    }
-    return bytes;
-};
-
 var CACHE = 'storage_cache';
 var MARKS = 'storage_marks';
 var CREATEAT = 'c';
@@ -101,7 +89,7 @@ var EXPIRE = 'e';
 var TIMES = 't';
 
 var LocalStorageCache = function () {
-  function LocalStorageCache(size, strategy) {
+  function LocalStorageCache(size, strategy, charset) {
     classCallCheck(this, LocalStorageCache);
 
     var _storage = localStorage.getItem(CACHE) || '{}';
@@ -113,9 +101,10 @@ var LocalStorageCache = function () {
     this.storage = storage;
     this.marks = marks;
     this.strategy = strategy || 'LRU';
+    this.charset = charset;
 
     if (size > 3 * 1024) {
-      throw new Error('超过最大空间（3MB）限制！');
+      throw new Error('3MB is the upper limit of size');
     }
 
     this.size = (size || 2 * 1024) * 1024;
@@ -168,9 +157,9 @@ var LocalStorageCache = function () {
       var _newItemMark,
           _this = this;
 
-      var newItemSize = sizeof(defineProperty({}, key, value));
+      var newItemSize = sizeof(defineProperty({}, key, value), this.charset);
       if (newItemSize >= this.size) {
-        throw new Error('单次缓存的数据大于缓存整体空间大小！');
+        throw new Error('the size of ' + key + ' is bigger than cache\'s');
       }
 
       var itemMark = this._getMarks(key);
@@ -184,9 +173,9 @@ var LocalStorageCache = function () {
         newItemMark[TIMES] = 0;
       }
 
-      var storageSize = sizeof(this.storage);
+      var storageSize = sizeof(this.storage, this.charset);
       if (newItemSize + storageSize < this.size) {
-        // 缓存空间足够
+        // size is enough
         this._setMarks(key, newItemMark);
         return;
       }
@@ -197,7 +186,7 @@ var LocalStorageCache = function () {
         return _this.marks[a][v] < _this.marks[b][v];
       });
 
-      while (newItemSize + sizeof(this.storage) >= this.size) {
+      while (newItemSize + sizeof(this.storage, this.charset) >= this.size) {
         var _key = keys.pop();
 
         delete this.storage[_key];
@@ -220,7 +209,7 @@ var LocalStorageCache = function () {
       }
 
       if (itemMark[EXPIRE] && itemMark[EXPIRE] * 1000 + itemMark[CREATEAT] < new Date().getTime()) {
-        // 已过期
+        // expired
         this._remove(key);
         return undefined;
       }
