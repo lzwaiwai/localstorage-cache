@@ -8,11 +8,19 @@ const EXPIRE = 'e';
 const TIMES = 't';
 
 class LocalStorageCache {
-  constructor(size, strategy, charset) {
-    const _storage = localStorage.getItem(CACHE) || '{}';
+  constructor(size, strategy, charset, keyAppend) {
+    if (keyAppend) {
+      this.CACHE_KEY = `${CACHE}_${keyAppend}`
+      this.MARKS_KEY = `${MARKS}_${keyAppend}`
+    } else {
+      this.CACHE_KEY = CACHE
+      this.MARKS_KEY = MARKS
+    }
+
+    const _storage = localStorage.getItem(this.CACHE_KEY) || '{}';
     const storage = JSON.parse(_storage);
 
-    const _marks = localStorage.getItem(MARKS) || '{}';
+    const _marks = localStorage.getItem(this.MARKS_KEY) || '{}';
     const marks = JSON.parse(_marks);
 
     this.storage = storage;
@@ -33,7 +41,7 @@ class LocalStorageCache {
 
   _setValue(key, value) {
     this.storage[key] = value;
-    localStorage.setItem(CACHE, JSON.stringify(this.storage));
+    localStorage.setItem(this.CACHE_KEY, JSON.stringify(this.storage));
   }
 
   _getMarks(key) {
@@ -42,24 +50,24 @@ class LocalStorageCache {
 
   _setMarks(key, value) {
     this.marks[key] = value;
-    localStorage.setItem(MARKS, JSON.stringify(this.marks));
+    localStorage.setItem(this.MARKS_KEY, JSON.stringify(this.marks));
   }
 
   _remove(key) {
     if (this.storage[key])  {
       delete this.storage[key];
-      localStorage.setItem(CACHE, JSON.stringify(this.storage));
+      localStorage.setItem(this.CACHE_KEY, JSON.stringify(this.storage));
     }
 
     if (this.marks[key]) {
       delete this.marks[key];
-      localStorage.setItem(MARKS, JSON.stringify(this.marks));
+      localStorage.setItem(this.MARKS_KEY, JSON.stringify(this.marks));
     }
   }
 
   _clear() {
-    localStorage.removeItem(CACHE);
-    localStorage.removeItem(MARKS);
+    localStorage.removeItem(this.CACHE_KEY);
+    localStorage.removeItem(this.MARKS_KEY);
   }
 
   _overflow(key, value, expire) {
